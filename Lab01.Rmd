@@ -1,0 +1,227 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+---
+title: "Data-606-Lab-1--Introduction to R and RStudio"
+author: "Bikash Bhowmik"
+date: "2026-09-05"
+output: pdf
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(eval = TRUE, message = FALSE, warning = FALSE)
+library(tidyverse)
+library(openintro)
+```
+
+
+
+## The RStudio Interface
+
+```{r}
+data('arbuthnot', package='openintro')
+```
+
+## Exercise 1 
+What command would you use to extract just the counts of girls baptized? Try it!
+
+<b> Answer:  </b>
+
+```{r}
+arbuthnot$girls
+```
+
+## Exercise 2
+
+Is there an apparent trend in the number of girls baptized over the years? How would you describe it? (To ensure that your lab report is comprehensive, be sure to include the code needed to make the plot as well as your written interpretation.)
+
+<b> Answer:  </b>
+
+There is an apparent overall upward trend in the number of girls baptized over the years. Although the number fluctuates from year to year, the number of girls baptized generally increases from the early years toward the later years of the dataset.
+
+```{r}
+# Load library
+library(ggplot2)
+
+ggplot(arbuthnot, aes(x = year, y = girls)) + 
+  geom_line(color = "orange") +            
+  geom_point(color = "red") + 
+  labs(
+    title = "Number of Girls Baptized Over Time",
+    x = "Year", 
+    y = "Number of Girls"
+  ) + 
+  theme_minimal()
+
+```
+
+
+## Exercise 3
+
+Now, generate a plot of the proportion of boys born over time. What do you see?
+
+<b> Answer:  </b>
+
+To effectively visualize the proportion of boys baptized over time, a line plot is appropriate, with the x-axis representing the years and the y-axis representing the proportion of boys. The plot shows that the proportion of boys generally remains above 50% over the given time period, although it fluctuates from year to year.
+
+
+```{r}
+# Load library
+library(dplyr)
+
+# Calculate the proportion of boys baptized each year
+arbuthnot <- arbuthnot %>%
+  mutate(proportion_boys = boys / (boys + girls))
+
+# Create a plot of the proportion of boys baptized over time
+ggplot(arbuthnot, aes(x = year, y = proportion_boys)) +
+  geom_line(color = "blue") +
+  geom_point(color = "blue") +
+  labs(
+    title = "Proportion of Boys Baptized Over Time",
+    x = "Year",
+    y = "Proportion of Boys"
+  ) +
+  theme_minimal()
+```
+
+
+## Exercise 4
+
+What years are included in this data set? What are the dimensions of the data frame? What are the variable (column) names?
+
+<b> Answer:  </b>
+
+The present dataset includes data from 1940 to 2002. The data frame contains 63 observations and 3 variables. The variable names are year, boys, and girls.
+
+```{r}
+data('present', package='openintro')
+arbuthnot %>%
+  summarize(min = min(boys), max = max(boys))
+
+range(present$year)
+
+dim(present)
+
+colnames(present)
+
+```
+
+
+## Exercise 5
+
+How do these counts compare to Arbuthnot’s? Are they of a similar magnitude?
+
+<b> Answer:  </b>
+
+To compare the two datasets, I calculated the minimum, maximum, and mean birth counts for boys and girls in both the arbuthnot and present datasets. The results show that the birth counts in the present dataset are much larger than those in Arbuthnot’s dataset. Therefore, the two datasets are not of a similar magnitude. The larger counts in the present dataset reflect the much larger population represented by the U.S. birth records.
+
+```{r}
+# Summary statistics for the arbuthnot dataset 
+arbuthnot %>% 
+summarize( 
+min_boys = min(boys), 
+max_boys = max(boys), 
+mean_boys = mean(boys),
+min_girls = min(girls), 
+max_girls = max(girls), 
+mean_girls = mean(girls) ) 
+
+# Summary statistics for the present dataset 
+present %>% summarize( 
+min_boys = min(boys), 
+max_boys = max(boys), 
+mean_boys = mean(boys), 
+min_girls = min(girls), 
+max_girls = max(girls), 
+mean_girls = mean(girls) )
+
+```
+
+
+## Exercise 6
+
+Make a plot that displays the proportion of boys born over time. What do you see? Does Arbuthnot’s observation about boys being born in greater proportion than girls hold up in the U.S.? Include the plot in your response. Hint: You should be able to reuse your code from Exercise 3 above, just replace the dataframe name.
+
+
+<b> Answer:  </b>
+
+The overall trend in male birth rates over time has remained consistent, showing no significant deviations or anomalies in the observed patterns.
+
+```{r}
+
+# Calculate the proportion of boys born each year
+present <- present %>%
+  mutate(proportion_boys = boys / (boys + girls))
+
+# Create a plot of the proportion of boys born over time
+ggplot(present, aes(x = year, y = proportion_boys)) +
+  geom_line(color = "orange") +
+  geom_point(color = "black") +
+  labs(title = "Proportion of Boys Born Over Time",
+       x = "Year",
+       y = "Proportion of Boys") +
+  theme_minimal()
+
+  
+```
+
+## Exercise 7
+
+In what year did we see the most total number of births in the U.S.? Hint: First calculate the totals and save it as a new variable. Then, sort your dataset in descending order based on the total column. You can do this interactively in the data viewer by clicking on the arrows next to the variable names. To include the sorted result in your report you will need to use two new functions: arrange (for sorting). We can arrange the data in a descending order with another function: desc (for descending order). The sample code is provided below.
+
+<b> Answer:  </b>
+
+The year with the highest total number of births in the U.S. was 1961. I calculated the total number of births by adding the number of boys and girls born each year and then sorted the data in descending order. The results show that 1961 had the highest total number of births.
+
+```{r}
+present<- present %>%
+  mutate(total = boys + girls)
+present %>%
+  arrange(desc(total))
+
+present$year[which.max(present$boys + present$girls)]
+
+present %>%
+  filter(year == 1961)
+```
+
+
+
+## Conclusion
+
+This analysis examined historical baptism records from John Arbuthnot (1629–1710) and compared them with modern U.S. birth records (1940–2002). The analysis revealed several important patterns in the number and proportion of boys and girls born over time.
+
+1. Declining Baptism Rates for Girls (1629–1710)
+
+&bull; The number of girls baptized steadily declined over time. <br>
+&bull; This could be due to population changes, societal shifts, or data recording practices.
+
+2. More Boys Than Girls Are Born Historically and Today
+
+&bull; Arbuthnot originally observed that more boys than girls were baptized.<br>
+&bull; This trend remains consistent in modern U.S. birth records, with the proportion of boys consistently above 50%.
+
+3. The U.S. Birth Rate Is Much Higher Than Historical Data
+
+&bull; While Arbuthnot’s dataset records thousands of births per year,<br>
+&bull; the present dataset records millions—a result of population growth.
+
+4. Most Births Recorded in 1961 (Baby Boom Era)
+
+The highest number of births was recorded in 1961, reflecting the post-war Baby Boom.
+
+## Main Findings
+
+<ul> <li>The pattern of slightly more boys than girls is similar in Arbuthnot's data and modern U.S. data.</li> <li>Birth counts increased over time, mainly because of population growth.</li> <li>R functions such as <code>mutate()</code>, <code>arrange()</code>, and <code>ggplot()</code> help explore these patterns.</li> </ul>
+
+
+
+
+
+
+
+

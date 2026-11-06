@@ -1,0 +1,422 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+---
+title: "Data-606-Lab 5B - Confidence Levels"
+author: "Bikash Bhowmik"
+date: "11-Oct-2026"
+output: pdf
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(eval = TRUE, message = FALSE, warning = FALSE)
+library(tidyverse)
+library(openintro)
+library(infer)
+library(ggplot2)
+
+set.seed(123)
+
+```
+
+
+## Foundations for statistical inference - Confidence intervals
+
+If you have access to data on an entire population, say the opinion of every adult in the United States on whether or not they think climate change is affecting their local community, it’s straightforward to answer questions like, “What percent of US adults think climate change is affecting their local community?”. Similarly, if you had demographic information on the population you could examine how, if at all, this opinion varies among young and old adults and adults with different leanings. If you have access to only a sample of the population, as is often the case, the task becomes more complicated. What is your best guess for this proportion if you only have data from a small sample of adults? This type of situation requires that you use your sample to make inference on what your population looks like.
+
+<b> Setting a seed:</b> You will take random samples and build sampling distributions in this lab, which means you should set a seed on top of your lab. If this concept is new to you, review the lab on probability.
+
+## Getting Started
+
+<b> Load packages </b>
+
+In this lab, we will explore and visualize the data using the tidyverse suite of packages, and perform statistical inference using infer.
+
+Let’s load the packages.
+
+library(tidyverse)
+library(openintro)
+library(infer)
+
+## The data
+
+A 2019 Pew Research report states the following:
+
+To keep our computation simple, we will assume a total population size of 100,000 (even though that’s smaller than the population size of all US adults).
+
+Roughly six-in-ten U.S. adults (62%) say climate change is currently affecting their local community either a great deal or some, according to a new Pew Research Center survey.
+
+Source: Most Americans say climate change impacts their community, but effects vary by region
+
+In this lab, you will assume this 62% is a true population proportion and learn about how sample proportions can vary from sample to sample by taking smaller samples from the population. We will first create our population assuming a population size of 100,000. This means 62,000 (62%) of the adult population think climate change impacts their community, and the remaining 38,000 does not think so.
+
+```{r}
+us_adults <- tibble(
+  climate_change_affects = c(rep("Yes", 62000), rep("No", 38000))
+)
+```
+
+The name of the data frame is us_adults and the name of the variable that contains responses to the question “Do you think climate change is affecting your local community?” is climate_change_affects.
+
+We can quickly visualize the distribution of these responses using a bar plot.
+
+```{r}
+ggplot(us_adults, aes(x = climate_change_affects)) +
+  geom_bar() +
+  labs(
+    x = "", y = "",
+    title = "Do you think climate change is affecting your local community?"
+  ) +
+  coord_flip() 
+
+```
+
+We can also obtain summary statistics to confirm we constructed the data frame correctly.
+
+```{r}
+us_adults %>%
+  count(climate_change_affects) %>%
+  mutate(p = n /sum(n))
+```
+
+In this lab, you’ll start with a simple random sample of size 60 from the population.
+
+```{r}
+n <- 60
+samp <- us_adults %>%
+  sample_n(size = n)
+```
+
+
+## Exercise 1
+What percent of the adults in your sample think climate change affects their local community? Hint: Just like we did with the population, we can calculate the proportion of those in this sample who think climate change affects their local community.
+
+<b> Answer:  </b>
+
+The percentage of adults in the sample who think climate change affects their local community is 70%.
+
+```{r}
+set.seed(999)
+us_adults <- tibble(
+  climate_change_affects = c(rep("Yes", 62000), rep("No", 38000))
+)
+ggplot(us_adults, aes(x = climate_change_affects)) +
+  geom_bar() +
+  labs(
+    x = "", y = "",
+    title = "Do you think climate change is affecting your local community?"
+  ) +
+  coord_flip() 
+
+
+us_adults %>%
+  dplyr::count(climate_change_affects) %>%
+  dplyr::mutate(p = n /sum(n))
+```
+
+```{r}
+n <- 60
+samp <- us_adults %>%
+  sample_n(size = n)
+
+samp %>%
+  dplyr::count(climate_change_affects) %>%
+  dplyr::mutate(p = n /sum(n))
+```
+
+
+## Exercise 2
+
+Would you expect another student’s sample proportion to be identical to yours? Would you expect it to be similar? Why or why not?
+
+<b> Answer:  </b>
+
+No, I would not expect another student's sample proportion to be exactly the same as mine. The proportion may be similar because both samples are taken from the same population, but random sampling variability can cause the sample proportions to differ.
+
+
+## Confidence intervals
+Return for a moment to the question that first motivated this lab: based on this sample, what can you infer about the population? With just one sample, the best estimate of the proportion of US adults who think climate change affects their local community would be the sample proportion, usually denoted as p^
+ (here we are calling it p_hat). That serves as a good point estimate, but it would be useful to also communicate how uncertain you are of that estimate. This uncertainty can be quantified using a confidence interval.
+
+
+Another way is using simulation, or to be more specific, using bootstrapping. The term bootstrapping comes from the phrase “pulling oneself up by one’s bootstraps”, which is a metaphor for accomplishing an impossible task without any outside help. In this case the impossible task is estimating a population parameter (the unknown population proportion), and we’ll accomplish it using data from only the given sample. Note that this notion of saying something about a population parameter using only information from an observed sample is the crux of statistical inference, it is not limited to bootstrapping.
+
+In essence, bootstrapping assumes that there are more of observations in the populations like the ones in the observed sample. So we “reconstruct” the population by resampling from our sample, with replacement. The bootstrapping scheme is as follows:
+
+Step 1. Take a bootstrap sample - a random sample taken with replacement from the original sample, of the same size as the original sample.
+Step 2. Calculate the bootstrap statistic - a statistic such as mean, median, proportion, slope, etc. computed on the bootstrap samples.
+Step 3. Repeat steps (1) and (2) many times to create a bootstrap distribution - a distribution of bootstrap statistics.
+Step 4. Calculate the bounds of the XX% confidence interval as the middle XX% j knof the bootstrap distribution.
+
+Instead of coding up each of these steps, we will construct confidence intervals using the infer package.
+
+Below is an overview of the functions we will use to construct this confidence interval:
+
+Function	Purpose
+specify	Identify your variable of interest
+generate	The number of samples you want to generate
+calculate	The sample statistic you want to do inference with, or you can also think of this as the population parameter you want to do inference for
+get_ci	Find the confidence interval
+This code will find the 95 percent confidence interval for proportion of US adults who think climate change affects their local community.
+
+```{r}
+samp %>%
+  specify(response = climate_change_affects, success = "Yes") %>%
+  generate(reps = 1000, type = "bootstrap") %>%
+  calculate(stat = "prop") %>%
+  get_ci(level = 0.95)
+```
+
+
+1. In specify we specify the response variable and the level of that variable we are calling a success.
+2. In generate we provide the number of resamples we want from the population in the reps argument (this should be a reasonably large number) as well as the type of resampling we want to do, which is "bootstrap" in the case of constructing a confidence interval.
+3. Then, we calculate the sample statistic of interest for each of these resamples, which is proportion.
+
+Feel free to test out the rest of the arguments for these functions, since these commands will be used together to calculate confidence intervals and solve inference problems for the rest of the semester. But we will also walk you through more examples in future chapters.
+
+To recap: even though we don’t know what the full population looks like, we’re 95% confident that the true proportion of US adults who think climate change affects their local community is between the two bounds reported as result of this pipeline.
+
+## Confidence levels
+
+
+## Exercise 3
+
+In the interpretation above, we used the phrase “95% confident”. What does “95% confidence” mean?
+
+<b> Answer:  </b>
+
+A 95% confidence level means that if we repeatedly took random samples from the population and constructed a confidence interval from each sample using the same method, approximately 95% of those intervals would contain the true population proportion. The other 5% would be expected not to contain it.
+
+## Exercise 4
+
+Does your confidence interval capture the true population proportion of US adults who think climate change affects their local community? If you are working on this lab in a classroom, does your neighbor’s interval capture this value?
+
+<b> Answer:  </b>
+
+Yes. My 95% bootstrap confidence interval is approximately (0.583, 0.817), and it contains the true population proportion of 0.62. Whether another student's interval contains 0.62 depends on the sample and the interval obtained.
+
+
+## Exercise 5
+
+Each student should have gotten a slightly different confidence interval. What proportion of those intervals would you expect to capture the true population mean? Why?
+
+<b> Answer:  </b>
+
+The proportion of intervals that contains true population proportion is expected to be 95% on average and the other 5% of confidence intervals might not contain the true parameters due to the inherent variability and randomness of the sampling process.
+
+In the next part of the lab, you will collect many samples to learn more about how sample proportions and confidence intervals constructed based on those samples vary from one sample to another.
+
+1. Obtain a random sample.
+2. Calculate the sample proportion, and use these to calculate and store the lower and upper bounds of the confidence intervals.
+3. Repeat these steps 50 times.
+Doing this would require learning programming concepts like iteration so that you can automate repeating running the code you’ve developed so far many times to obtain many (50) confidence intervals. In order to keep the programming simpler, we are providing the interactive app below that basically does this for you and created a plot similar to Figure 5.6 on OpenIntro Statistics, 4th Edition (page 182).
+
+## Exercise 6
+Given a sample size of 60, 1000 bootstrap samples for each interval, and 50 confidence intervals constructed (the default values for the above app), what proportion of your confidence intervals include the true population proportion? Is this proportion exactly equal to the confidence level? If not, explain why. Make sure to include your plot in your answer.
+
+<b> Answer:  </b>
+
+```{r}
+set.seed(9999)
+
+results_95 <- map_dfr(1:50, function(i) {
+
+  sample_data <- us_adults %>%
+    slice_sample(n = 60)
+
+  ci <- sample_data %>%
+    specify(
+      response = climate_change_affects,
+      success = "Yes"
+    ) %>%
+    generate(reps = 1000, type = "bootstrap") %>%
+    calculate(stat = "prop") %>%
+    get_ci(level = 0.95)
+
+  ci %>%
+    mutate(
+      sample = i,
+      contains_true = lower_ci <= 0.62 &
+                      upper_ci >= 0.62
+    )
+})
+
+# Calculate coverage proportion
+mean(results_95$contains_true)
+
+# Plot 50 confidence intervals
+ggplot(results_95,
+       aes(x = sample,
+           ymin = lower_ci,
+           ymax = upper_ci,
+           color = contains_true)) +
+  geom_linerange(linewidth = 0.8) +
+  geom_hline(
+    yintercept = 0.62,
+    linetype = "dashed"
+  ) +
+  labs(
+    title = "50 Bootstrap Confidence Intervals (95%)",
+    x = "Sample Number",
+    y = "Confidence Interval",
+    color = "Contains 0.62"
+  ) +
+  theme_minimal()
+```
+
+Based on the simulation, 48 out of 50 confidence intervals (96%) contained the true population proportion of 0.62. This proportion is slightly higher than the 95% confidence level. The difference occurs because of random sampling variability. Since only 50 confidence intervals were constructed, the observed proportion does not have to be exactly 95%. With repeated sampling, approximately 95% of confidence intervals are expected to contain the true population proportion when using a method with 95% coverage.
+
+## Exercise 7
+
+Choose a different confidence level than 95%. Would you expect a confidence interval at this level to me wider or narrower than the confidence interval you calculated at the 95% confidence level? Explain your reasoning.
+
+<b> Answer:  </b>
+
+The confidence interval is getting wider if a confidence level is greater than 95% that the true population parameters fall in the range. On the other hand, the narrower interval accepts less certainty that the margin of error will be reduced.
+
+## Exercise 8
+
+Using code from the infer package and data from the one sample you have (samp), find a confidence interval for the proportion of US Adults who think climate change is affecting their local community with a confidence level of your choosing (other than 95%) and interpret it.
+
+<b> Answer:  </b>
+
+```{r}
+set.seed(999)
+
+ci_85 <- samp %>%
+  specify(
+    response = climate_change_affects,
+    success = "Yes"
+  ) %>%
+  generate(reps = 1000, type = "bootstrap") %>%
+  calculate(stat = "prop") %>%
+  get_ci(level = 0.85)
+
+ci_85
+```
+
+Using 1,000 bootstrap samples at an 85% confidence level, the confidence interval for the population proportion is (0.617, 0.800).
+
+We are 85% confident that the true proportion of U.S. adults who believe climate change affects their local community is between 61.7% and 80.0%.
+
+
+## Exercise 9
+
+Using the app, calculate 50 confidence intervals at the confidence level you chose in the previous question, and plot all intervals on one plot, and calculate the proportion of intervals that include the true population proportion. How does this percentage compare to the confidence level selected for the intervals?
+
+<b> Answer:  </b>
+
+```{r}
+set.seed(9999)
+
+# Generate 50 confidence intervals at the 85% confidence level
+results_85 <- purrr::map_dfr(1:50, function(i) {
+
+  # Random sample of 60 adults from the population
+  sample_data <- us_adults %>%
+    dplyr::slice_sample(n = 60)
+
+  # Calculate 85% bootstrap confidence interval
+  ci <- sample_data %>%
+    infer::specify(
+      response = climate_change_affects,
+      success = "Yes"
+    ) %>%
+    infer::generate(reps = 1000, type = "bootstrap") %>%
+    infer::calculate(stat = "prop") %>%
+    infer::get_ci(level = 0.85)
+
+  # Check whether the interval contains 0.62
+  ci %>%
+    dplyr::mutate(
+      sample = i,
+      contains_true = lower_ci <= 0.62 &
+                      upper_ci >= 0.62
+    )
+})
+
+# Number of intervals containing the true proportion
+sum(results_85$contains_true)
+
+# Proportion of intervals containing the true proportion
+mean(results_85$contains_true)
+
+# Percentage of intervals containing the true proportion
+mean(results_85$contains_true) * 100
+
+# Plot all 50 confidence intervals
+ggplot(results_85,
+       aes(x = sample,
+           ymin = lower_ci,
+           ymax = upper_ci,
+           color = contains_true)) +
+  geom_linerange(linewidth = 0.8) +
+  geom_hline(
+    yintercept = 0.62,
+    linetype = "dashed",
+    linewidth = 0.8
+  ) +
+  scale_color_manual(
+    values = c("TRUE" = "blue", "FALSE" = "red"),
+    labels = c("FALSE" = "Does Not Contain 0.62",
+               "TRUE" = "Contains 0.62")
+  ) +
+  labs(
+    title = "50 Bootstrap Confidence Intervals (85%)",
+    subtitle = "Sample Size = 60 | Bootstrap Resamples = 1000",
+    x = "Sample Number",
+    y = "Confidence Interval",
+    color = "Coverage"
+  ) +
+  theme_minimal()
+```  
+
+At the 85% confidence level, **41 out of 50 confidence intervals** contained the true population proportion of 0.62. Therefore, the proportion of intervals that captured the true population proportion was **0.82 (82%)**.
+
+This result is slightly lower than the selected 85% confidence level because only 50 confidence intervals were constructed, and random sampling variability affects the results. In repeated sampling, approximately 85% of confidence intervals are expected to contain the true population proportion when using a method with 85% coverage.
+
+## Exercise 10
+
+Lastly, try one more (different) confidence level. First, state how you expect the width of this interval to compare to previous ones you calculated. Then, calculate the bounds of the interval using the infer package and data from samp and interpret it. Finally, use the app to generate many intervals and calculate the proportion of intervals that are capture the true population proportion.
+
+<b> Answer:  </b>
+
+```{r}
+set.seed(999)
+
+ci_99 <- samp %>%
+  specify(
+    response = climate_change_affects,
+    success = "Yes"
+  ) %>%
+  generate(reps = 1000, type = "bootstrap") %>%
+  calculate(stat = "prop") %>%
+  get_ci(level = 0.99)
+
+ci_99
+```
+
+I selected a 99% confidence level. I expect the 99% confidence interval to be wider than the 95% and 85% confidence intervals because a higher confidence level requires a wider interval.
+
+Using the `infer` package with 1,000 bootstrap samples, the 99% confidence interval is (0.55, 0.85). We are 99% confident that the true proportion of U.S. adults who believe climate change affects their local community is between 55% and 85%.
+
+
+## Exercise 11
+
+Using the app, experiment with different sample sizes and comment on how the widths of intervals change as sample size changes (increases and decreases).
+
+<b> Answer:  </b>
+
+With larger sample sizes, confidence intervals is getting narrower, reducing the uncertainty and increasing precision. With smaller sample sizes, the wider in intervals, bigger in uncertainty and lesser in accuracy. Therefore, sample size has a significant impact on the width of precision of confidence intervals of a particular statistical analysis.
+
+## Exercise 12
+
+Finally, given a sample size (say, 60), how does the width of the interval change as you increase the number of bootstrap samples. Hint: Does changing the number of bootstap samples affect the standard error?
+
+<b> Answer:  </b>
+
+Increasing the number of bootstrap samples generally makes the estimated confidence interval more stable because the bootstrap distribution is estimated more precisely. The interval width may change slightly as the number of bootstrap samples increases, but it should generally stabilize when enough resamples are used. Increasing the number of bootstrap samples does not change the original sample size or eliminate the sampling uncertainty.
+
