@@ -1,0 +1,335 @@
+---
+title: "DATA-606 -- Project Proposal"
+author: "Bikash Bhowmik"
+date: "07-Nov-2026"
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 2
+    number_sections: false
+    latex_engine: xelatex
+    keep_tex: true
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    number_sections: false
+    self_contained: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  fig.width = 8,
+  fig.height = 5
+)
+
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(psych)
+library(knitr)
+```
+
+# Data Preparation
+
+This project uses an airline traffic dataset containing passenger, freight, mail, route-distance, carrier, origin, destination, and month information. The data are imported from the public GitHub repository.
+
+```{r import-data}
+data_url <- paste0(
+  "https://raw.githubusercontent.com/BIKASHBHOWMIK15/Data-606/main/Project/flights_data_clean.csv")
+
+flights_raw <- read_csv(data_url, show_col_types = FALSE)
+
+# Review the imported dataset.
+dim(flights_raw)
+names(flights_raw)
+glimpse(flights_raw)
+```
+
+The supplied CSV includes `passengers`, `freight`, `mail`, `distance`, `unique_carrier`, `unique_carrier_name`, `origin_city_name`, `dest_city_name`, `month`, `distance_group`, `class`, `distance_cat`, `carrier_type`, `month_name`, `route`, and `distance_simple`.
+
+The following code uses the actual column names in the CSV. The dataset contains passenger counts ranging from 20 to 1,000. No zero-passenger records are present in the current cleaned dataset.
+
+```{r prepare-data}
+required_variables <- c(
+  "passengers", "distance", "unique_carrier",
+  "unique_carrier_name", "origin_city_name",
+  "dest_city_name", "month", "carrier_type",
+  "month_name", "route"
+)
+
+missing_variables <- setdiff(required_variables, names(flights_raw))
+
+if (length(missing_variables) > 0) {
+  stop(
+    "Expected columns not found: ",
+    paste(missing_variables, collapse = ", "),
+    ". Check the CSV column names before continuing."
+  )
+}
+
+flights <- flights_raw |>
+  mutate(
+    passengers = as.numeric(passengers),
+    distance = as.numeric(distance),
+    month = as.integer(month),
+    carrier_type = as.factor(carrier_type),
+    month_name = factor(
+      tolower(month_name),
+      levels = c("jan", "feb", "mar", "apr", "may", "jun", "jul")
+    )
+  ) |>
+  filter(
+    !is.na(passengers),
+    !is.na(distance),
+    !is.na(carrier_type),
+    !is.na(month),
+    passengers >= 0,
+    distance > 0
+  )
+
+sample_counts <- tibble(
+  Dataset = c("Imported dataset", "Analysis dataset"),
+  Number_of_records = c(nrow(flights_raw), nrow(flights))
+)
+
+kable(
+  sample_counts,
+  caption = "Number of records before and after basic cleaning"
+)
+```
+
+The basic cleaning removes records with missing values in the primary analysis variables, negative passenger counts, or nonpositive route distances. All records meeting these criteria are retained. The repository describes the data as covering January through July 2026; the supplied CSV does not include a year column, so the study period is based on the repository description rather than a year filter in R.
+
+```{r data-checks}
+summary(flights[c("passengers", "distance", "month")])
+table(flights$carrier_type, useNA = "ifany")
+table(flights$month_name, useNA = "ifany")
+range(flights$month, na.rm = TRUE)
+```
+
+# Research question
+
+**Is route distance associated with passenger traffic across U.S. airline reporting records during January through July 2026?**
+
+The project will examine whether airline reporting records for longer routes tend to have higher or lower reported passenger counts. The question focuses on an association and does not assume that route distance causes passenger traffic to change.
+
+# Research Hypotheses
+
+The project will investigate whether airline route distance is statistically associated with reported passenger traffic.
+
+**Null Hypothesis (H0):**
+
+There is no statistically significant linear association between airline route distance and reported passenger traffic across the airline reporting records.
+
+\[
+H_0: \rho = 0
+\]
+
+**Alternative Hypothesis (HA):**
+
+There is a statistically significant linear association between airline route distance and reported passenger traffic across the airline reporting records.
+
+\[
+H_A: \rho \neq 0
+\]
+
+The hypotheses will be evaluated using Pearson correlation and simple linear regression, provided the data and model assumptions are reasonably appropriate. A significance level of 0.05 will be used. If the assumptions for Pearson correlation are not appropriate, Spearman rank correlation may be considered as an alternative.
+
+The analysis will examine association rather than causation.
+
+# Cases
+
+Each case represents an airline reporting record for a carrier and a route during a reporting period. A case should not be interpreted as one individual aircraft departure.
+
+- Original imported dataset: `r format(nrow(flights_raw), big.mark = ",")` records.
+- Analysis dataset after the basic cleaning steps: `r format(nrow(flights), big.mark = ",")` records.
+- Study period, according to the repository description: January–July 2026.
+
+# Data collection
+
+This project uses secondary data made available in a public GitHub repository. The dataset contains reported airline traffic information, including passenger counts, freight and mail quantities, route distances, carrier identifiers, origin and destination cities, and reporting months.
+
+The data were collected and made available before this project. The researcher does not assign airlines to routes, manipulate route distances, or collect information directly from passengers.
+
+The cleaned dataset used in this analysis is publicly available in the researcher's GitHub repository (Bhowmik, 2026).
+
+# Type of study
+
+This is an **observational study**. The project analyzes existing airline reporting records and does not involve an experiment or treatment assignment. Therefore, the results can describe associations in the dataset but cannot establish cause and effect.
+
+# Data Source
+
+The cleaned airline traffic dataset used in this project is maintained in the researcher's public GitHub repository (Bhowmik, 2026). The repository contains the CSV file used for data preparation, exploratory analysis, and statistical modeling.
+
+The dataset includes airline reporting information such as passenger counts, freight, mail, route distance, carrier identification, origin and destination cities, and reporting months.
+
+The dataset can be accessed through the following links:
+
+### Dataset and Source Code
+
+- [View GitHub Project Repository](https://github.com/BIKASHBHOWMIK15/Data-606/tree/main/Project)
+
+- [View Cleaned Airline Traffic CSV](https://github.com/BIKASHBHOWMIK15/Data-606/blob/main/Project/flights_data_clean.csv)
+
+- [Download Cleaned Airline Traffic Dataset](https://raw.githubusercontent.com/BIKASHBHOWMIK15/Data-606/main/Project/flights_data_clean.csv)
+
+
+The analysis uses the cleaned CSV file available in the repository. The repository is the source of the version analyzed in this project; it should not be confused with the original organization that collected the airline reporting data.
+
+# Response
+
+The response variable is **`passengers`**.
+
+- **Type:** Quantitative (numerical).
+- **Description:** The reported passenger count for an airline reporting record.
+
+# Explanatory
+
+The primary explanatory variable is **`distance`**.
+
+- **Type:** Quantitative (numerical).
+- **Description:** The reported distance of the airline route.
+
+Additional explanatory or grouping variables for exploratory analysis include:
+
+- **`carrier_type`** — categorical; carrier classification supplied in the dataset (for example, regional carriers and national carriers).
+- **`month_name`** — categorical; reporting month from January through July.
+- **`unique_carrier`** — categorical; airline carrier identifier.
+- **`route`** — categorical; origin-destination route.
+
+The primary analysis will examine the relationship between `distance` and `passengers`. Carrier type and month will be used for additional descriptive comparisons.
+
+# Relevant summary statistics
+
+The following summaries describe passenger traffic and route distance in the analysis dataset. Mean, standard deviation, median, and interquartile range are included because passenger counts may be skewed.
+
+## Overall descriptive statistics
+
+```{r overall-statistics}
+overall_summary <- psych::describe(
+  flights |>
+    select(passengers, distance)
+)
+
+kable(
+  round(overall_summary, 2),
+  caption = "Descriptive statistics for passenger count and route distance"
+)
+```
+
+## Passenger traffic by carrier type
+
+```{r carrier-statistics}
+carrier_summary <- flights |>
+  group_by(carrier_type) |>
+  summarise(
+    n = n(),
+    mean_passengers = mean(passengers, na.rm = TRUE),
+    sd_passengers = sd(passengers, na.rm = TRUE),
+    median_passengers = median(passengers, na.rm = TRUE),
+    IQR_passengers = IQR(passengers, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+kable(
+  carrier_summary,
+  digits = 2,
+  caption = "Passenger traffic summary by carrier type"
+)
+```
+
+## Passenger traffic by month
+
+```{r monthly-statistics}
+monthly_summary <- flights |>
+  group_by(month_name) |>
+  summarise(
+    n = n(),
+    mean_passengers = mean(passengers, na.rm = TRUE),
+    sd_passengers = sd(passengers, na.rm = TRUE),
+    median_passengers = median(passengers, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+kable(
+  monthly_summary,
+  digits = 2,
+  caption = "Passenger traffic summary by month"
+)
+```
+
+## Distribution of passenger traffic
+
+```{r passenger-histogram}
+ggplot(flights, aes(x = passengers)) +
+  geom_histogram(bins = 30, color = "white") +
+  labs(
+    title = "Distribution of Reported Passenger Traffic",
+    x = "Reported passenger count",
+    y = "Number of reporting records"
+  ) +
+  theme_minimal()
+```
+
+Passenger counts may have a right-skewed distribution. The following plot uses a logarithmic horizontal scale and excludes zero values from the visualization only; zero-passenger records remain in the analysis dataset.
+
+```{r passenger-log-histogram}
+ggplot(
+  flights |> filter(passengers > 0),
+  aes(x = passengers)
+) +
+  geom_histogram(bins = 30, color = "white") +
+  scale_x_log10() +
+  labs(
+    title = "Distribution of Positive Passenger Counts",
+    subtitle = "Horizontal axis uses a logarithmic scale",
+    x = "Reported passenger count (log scale)",
+    y = "Number of reporting records"
+  ) +
+  theme_minimal()
+```
+
+## Distribution of route distance
+
+```{r distance-histogram}
+ggplot(flights, aes(x = distance)) +
+  geom_histogram(bins = 30, color = "white") +
+  labs(
+    title = "Distribution of Route Distance",
+    x = "Route distance",
+    y = "Number of reporting records"
+  ) +
+  theme_minimal()
+```
+
+## Relationship between route distance and passenger traffic
+
+```{r distance-passenger-scatterplot}
+ggplot(flights, aes(x = distance, y = passengers)) +
+  geom_point(alpha = 0.25) +
+  geom_smooth(method = "lm", se = TRUE) +
+  labs(
+    title = "Route Distance and Reported Passenger Traffic",
+    x = "Route distance",
+    y = "Reported passenger count",
+    caption = "The fitted line describes an overall linear trend; it does not establish causation."
+  ) +
+  theme_minimal()
+```
+
+## Preliminary analysis plan
+
+The analysis will begin with descriptive statistics and visualizations to examine the distributions of passenger counts and route distances and the pattern between the two variables. Pearson correlation and simple linear regression may be considered if the relationship and model assumptions are reasonably appropriate. If the data do not support those methods, Spearman correlation may be considered as an alternative.
+
+The dataset may contain repeated records for the same carrier or route across reporting periods. This structure will be considered when interpreting the results, especially when assessing the independence assumption. Conclusions will be limited to the reporting records represented in this dataset and the January–July 2026 period described by the repository.
+
+The statistical methods will be selected based on the research question, data characteristics, and relevant statistical assumptions.
+
+# References
+
+- [Bureau of Transportation Statistics (BTS) – Airline Data](https://transtats.bts.gov/DL_SelectFields.aspx?QO_fu146_anzr=Nv4+Pn44vr45&gnoyr_VQ=GEE)
+
