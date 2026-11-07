@@ -33,6 +33,10 @@ library(psych)
 library(knitr)
 ```
 
+# Introduction
+
+Air transportation plays an important role in connecting cities and supporting travel and commerce across the United States. Passenger traffic can vary considerably across airline routes, and route distance may be one factor associated with these differences. This project examines airline reporting records from January through July 2026 to explore the relationship between route distance and reported passenger counts. The analysis also considers carrier and route characteristics to describe patterns in the dataset. Because this is an observational study, the findings will identify associations rather than establish cause-and-effect relationships.
+
 # Data Preparation
 
 This project uses an airline traffic dataset containing passenger, freight, mail, route-distance, carrier, origin, destination, and month information. The data are imported from the public GitHub repository.
@@ -173,9 +177,7 @@ The dataset can be accessed through the following links:
 
 - [View GitHub Project Repository](https://github.com/BIKASHBHOWMIK15/Data-606/tree/main/Project)
 
-- [View Cleaned Airline Traffic CSV](https://github.com/BIKASHBHOWMIK15/Data-606/blob/main/Project/flights_data_clean.csv)
-
-- [Download Cleaned Airline Traffic Dataset](https://raw.githubusercontent.com/BIKASHBHOWMIK15/Data-606/main/Project/flights_data_clean.csv)
+- [View Cleaned Airline Traffic CSV](https://raw.githubusercontent.com/BIKASHBHOWMIK15/Data-606/main/Project/flights_data_clean.csv)
 
 
 The analysis uses the cleaned CSV file available in the repository. The repository is the source of the version analyzed in this project; it should not be confused with the original organization that collected the airline reporting data.
